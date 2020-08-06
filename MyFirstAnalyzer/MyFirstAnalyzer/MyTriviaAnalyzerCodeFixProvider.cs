@@ -52,14 +52,8 @@ namespace MyFirstAnalyzer
 
         private async Task<Document> ApplyFormattingAsync(Document document, ExpressionStatementSyntax expressionStatement, CancellationToken ct)
         {
-            var invocationExpressions = expressionStatement.DescendantNodes(x => !x.IsKind(SyntaxKind.ArgumentList)).OfType<InvocationExpressionSyntax>().ToList();
-            var newNodes = Helper(invocationExpressions).ToList();
-            var formattedExpressionStatement = expressionStatement;
-            for (int i = 0; i < invocationExpressions.Count; ++i)
-            {
-                formattedExpressionStatement = formattedExpressionStatement.ReplaceNode(invocationExpressions[i], newNodes[i]);
-            }
-            
+            var invocationExpression = expressionStatement.Expression as InvocationExpressionSyntax;
+            var formattedExpressionStatement = expressionStatement.WithExpression(InvocationExpressionHelper(invocationExpression));
 
             var oldRoot = await document.GetSyntaxRootAsync(ct).ConfigureAwait(false);
             var newRoot = oldRoot.ReplaceNode(expressionStatement, formattedExpressionStatement);
@@ -67,119 +61,132 @@ namespace MyFirstAnalyzer
             return document.WithSyntaxRoot(newRoot);
         }
 
-        private static IEnumerable<InvocationExpressionSyntax> Helper(IEnumerable<InvocationExpressionSyntax> invocationExpressions)
+        private static InvocationExpressionSyntax InvocationExpressionHelper(InvocationExpressionSyntax invocationExpression)
         {
-            var newInvocationExpressions = new List<InvocationExpressionSyntax>();
-            foreach (var invocationExpression in invocationExpressions)
+            var memberAccessExpression = invocationExpression.Expression as MemberAccessExpressionSyntax;
+
+            var invocationLeadingWhitespace = invocationExpression.GetLeadingTrivia().FirstOrDefault(x => x.IsKind(SyntaxKind.WhitespaceTrivia));
+            var indentWidth = invocationLeadingWhitespace.Span.Length;
+            var memberAccessIndentWidth = indentWidth + 4;
+
+            return invocationExpression
+                .WithExpression(MemberAccessExpressionHelper(memberAccessExpression, indentWidth))
+                .WithArgumentList(ArgumentListHelper(invocationExpression.ArgumentList, memberAccessIndentWidth));
+        }
+
+        private static MemberAccessExpressionSyntax MemberAccessExpressionHelper(MemberAccessExpressionSyntax memberAccessExpression, int parentIndentWidth)
+        {
+            var invocationExpression = memberAccessExpression.Expression as InvocationExpressionSyntax;
+            if (invocationExpression != null)
             {
-                var newInvocationExpression = invocationExpression;
+                memberAccessExpression = memberAccessExpression.WithExpression(InvocationExpressionHelper(invocationExpression));
+            }
 
-                var memberAccessExpression = newInvocationExpression.Expression as MemberAccessExpressionSyntax;
-                if (memberAccessExpression == null)
+            if (memberAccessExpression == null)
+            {
+                throw new Exception("No member access expression contained in the invocation expression.");
+            }
+
+            if (!memberAccessExpression.Expression.GetTrailingTrivia().Any(x => x.IsKind(SyntaxKind.EndOfLineTrivia)))
+            {
+                memberAccessExpression = memberAccessExpression.WithExpression(
+                    memberAccessExpression.Expression.WithTrailingTrivia(
+                        new[] { SyntaxFactory.EndOfLine("\n") }));
+            }
+
+            var oldWhitespaceTrivia = memberAccessExpression.OperatorToken.LeadingTrivia.FirstOrDefault(x => x.IsKind(SyntaxKind.WhitespaceTrivia));
+            if (oldWhitespaceTrivia == null || oldWhitespaceTrivia.Span.Length != parentIndentWidth + 4)
+            {
+                var newWhitespaceTrivia = SyntaxFactory.SyntaxTrivia(SyntaxKind.WhitespaceTrivia, new string(' ', parentIndentWidth + 4));
+                SyntaxTriviaList leadingTrivia;
+                if (oldWhitespaceTrivia == null || oldWhitespaceTrivia.IsKind(SyntaxKind.None))
                 {
-                    continue;
+                    leadingTrivia = memberAccessExpression.OperatorToken.LeadingTrivia.Add(newWhitespaceTrivia);
+                }
+                else
+                {
+                    leadingTrivia = memberAccessExpression.OperatorToken.LeadingTrivia.Replace(oldWhitespaceTrivia, newWhitespaceTrivia);
                 }
 
-                if (!memberAccessExpression.Expression.GetTrailingTrivia().Any(x => x.IsKind(SyntaxKind.EndOfLineTrivia)))
-                {
-                    memberAccessExpression = memberAccessExpression.WithExpression(memberAccessExpression.Expression.WithTrailingTrivia(new[] { SyntaxFactory.EndOfLine("\n") }));
-                    newInvocationExpression = newInvocationExpression.WithExpression(memberAccessExpression);
-                }
+                memberAccessExpression = memberAccessExpression.WithOperatorToken(memberAccessExpression.OperatorToken.WithLeadingTrivia(leadingTrivia));
+            }
 
-                var invocationLeadingWhitespace = newInvocationExpression.GetLeadingTrivia().FirstOrDefault(x => x.IsKind(SyntaxKind.WhitespaceTrivia));
-                var invocationLeadingWhitespaceLength = invocationLeadingWhitespace.Span.Length;
-                var oldWhitespaceTrivia = memberAccessExpression.OperatorToken.LeadingTrivia.FirstOrDefault(x => x.IsKind(SyntaxKind.WhitespaceTrivia));
-                if (oldWhitespaceTrivia == null || oldWhitespaceTrivia.Span.Length != invocationLeadingWhitespaceLength + 4)
+            return memberAccessExpression;
+        }
+
+        private static ArgumentListSyntax ArgumentListHelper(ArgumentListSyntax argumentList, int parentIndexWidth)
+        {
+            var oldArgumentTokens = argumentList.ChildTokens().Where(x => !x.IsKind(SyntaxKind.CloseParenToken));
+            if (oldArgumentTokens.All(x => x.TrailingTrivia.SingleOrDefault(trivia => trivia.IsKind(SyntaxKind.EndOfLineTrivia)) != default))
+            {
+                argumentList = argumentList.ReplaceTokens(
+                    oldArgumentTokens,
+                    (original, _) => original.WithTrailingTrivia(new[] { SyntaxFactory.EndOfLine("\n") }));
+            }
+
+            var arguments = argumentList.Arguments;
+            var newArguments = arguments;
+            foreach (var argument in arguments)
+            {
+                ArgumentSyntax newArgument = argument;
+
+                var oldWhitespaceTrivia = newArgument.GetLeadingTrivia().FirstOrDefault(x => x.IsKind(SyntaxKind.WhitespaceTrivia));
+                if (oldWhitespaceTrivia == null || oldWhitespaceTrivia.Span.Length != parentIndexWidth + 4)
                 {
-                    var newWhitespaceTrivia = SyntaxFactory.SyntaxTrivia(SyntaxKind.WhitespaceTrivia, new string(' ', invocationLeadingWhitespaceLength + 4));
+                    var newWhitespaceTrivia = SyntaxFactory.SyntaxTrivia(SyntaxKind.WhitespaceTrivia, new string(' ', parentIndexWidth + 4));
                     SyntaxTriviaList leadingTrivia;
                     if (oldWhitespaceTrivia == null || oldWhitespaceTrivia.IsKind(SyntaxKind.None))
                     {
-                        leadingTrivia = memberAccessExpression.OperatorToken.LeadingTrivia.Add(newWhitespaceTrivia);
+                        leadingTrivia = newArgument.GetLeadingTrivia().Add(newWhitespaceTrivia);
                     }
                     else
                     {
-                        leadingTrivia = memberAccessExpression.OperatorToken.LeadingTrivia.Replace(oldWhitespaceTrivia, newWhitespaceTrivia);
+                        leadingTrivia = newArgument.GetLeadingTrivia().Replace(oldWhitespaceTrivia, newWhitespaceTrivia);
                     }
-                    
-                    memberAccessExpression = memberAccessExpression.WithOperatorToken(memberAccessExpression.OperatorToken.WithLeadingTrivia(leadingTrivia));
-                    newInvocationExpression = newInvocationExpression.WithExpression(memberAccessExpression);
+
+                    newArgument = newArgument.WithLeadingTrivia(leadingTrivia);
                 }
 
-                var oldArgumentTokens = newInvocationExpression.ArgumentList.ChildTokens().Where(x => !x.IsKind(SyntaxKind.CloseParenToken));
-                newInvocationExpression = newInvocationExpression.WithArgumentList(
-                    newInvocationExpression.ArgumentList.ReplaceTokens(
-                        oldArgumentTokens,
-                        (original, _) => original.WithTrailingTrivia(new[] { SyntaxFactory.EndOfLine("\n") })));
-                
-                var arguments = newInvocationExpression.ArgumentList.Arguments;
-                foreach (var argument in arguments)
+                var lambda = newArgument.Expression as LambdaExpressionSyntax;
+                if (lambda != null)
                 {
-                    ArgumentSyntax newArgument = argument;
-
-                    var memberAcessLeadingWhitespaceLength = memberAccessExpression.OperatorToken.LeadingTrivia.First(x => x.IsKind(SyntaxKind.WhitespaceTrivia)).Span.Length;
-                    oldWhitespaceTrivia = newArgument.GetLeadingTrivia().FirstOrDefault(x => x.IsKind(SyntaxKind.WhitespaceTrivia));
-                    if (oldWhitespaceTrivia == null || oldWhitespaceTrivia.Span.Length != memberAcessLeadingWhitespaceLength + 4)
+                    if (!lambda.ArrowToken.TrailingTrivia.Any(x => x.IsKind(SyntaxKind.EndOfLineTrivia)))
                     {
-                        var newWhitespaceTrivia = SyntaxFactory.SyntaxTrivia(SyntaxKind.WhitespaceTrivia, new string(' ', memberAcessLeadingWhitespaceLength + 4));
+                        lambda = lambda.WithArrowToken(lambda.ArrowToken.WithTrailingTrivia(new[] { SyntaxFactory.EndOfLine("\n") }));
+                        newArgument = newArgument.WithExpression(lambda);
+                    }
+
+                    var argumentLeadingWhitespaceLength = newArgument.GetLeadingTrivia().First(x => x.IsKind(SyntaxKind.WhitespaceTrivia)).Span.Length;
+                    oldWhitespaceTrivia = lambda.Body.GetLeadingTrivia().FirstOrDefault(x => x.IsKind(SyntaxKind.WhitespaceTrivia));
+                    if (oldWhitespaceTrivia == null || oldWhitespaceTrivia.Span.Length != argumentLeadingWhitespaceLength + 4)
+                    {
+                        var newWhitespaceTrivia = SyntaxFactory.SyntaxTrivia(SyntaxKind.WhitespaceTrivia, new string(' ', argumentLeadingWhitespaceLength + 4));
                         SyntaxTriviaList leadingTrivia;
                         if (oldWhitespaceTrivia == null || oldWhitespaceTrivia.IsKind(SyntaxKind.None))
                         {
-                            leadingTrivia = newArgument.GetLeadingTrivia().Add(newWhitespaceTrivia);
+                            leadingTrivia = lambda.Body.GetLeadingTrivia().Add(newWhitespaceTrivia);
                         }
                         else
                         {
-                            leadingTrivia = newArgument.GetLeadingTrivia().Replace(oldWhitespaceTrivia, newWhitespaceTrivia);
+                            leadingTrivia = lambda.Body.GetLeadingTrivia().Replace(oldWhitespaceTrivia, newWhitespaceTrivia);
                         }
 
-                        newArgument = newArgument.WithLeadingTrivia(leadingTrivia);
+                        lambda = lambda.WithBody(lambda.Body.WithLeadingTrivia(leadingTrivia));
+                        newArgument = newArgument.WithExpression(lambda);
                     }
-
-                    var lambda = newArgument.Expression as LambdaExpressionSyntax;
-                    if (lambda != null)
-                    {
-                        if (!lambda.ArrowToken.TrailingTrivia.Any(x =>x.IsKind(SyntaxKind.EndOfLineTrivia)))
-                        {
-                            lambda = lambda.WithArrowToken(lambda.ArrowToken.WithTrailingTrivia(new[] { SyntaxFactory.EndOfLine("\n") }));
-                            newArgument = newArgument.WithExpression(lambda);
-                        }
-
-                        var argumentLeadingWhitespaceLength = newArgument.GetLeadingTrivia().First(x => x.IsKind(SyntaxKind.WhitespaceTrivia)).Span.Length;
-                        oldWhitespaceTrivia = lambda.Body.GetLeadingTrivia().FirstOrDefault(x => x.IsKind(SyntaxKind.WhitespaceTrivia));
-                        if (oldWhitespaceTrivia == null || oldWhitespaceTrivia.Span.Length != argumentLeadingWhitespaceLength + 4)
-                        {
-                            var newWhitespaceTrivia = SyntaxFactory.SyntaxTrivia(SyntaxKind.WhitespaceTrivia, new string(' ', argumentLeadingWhitespaceLength + 4));
-                            SyntaxTriviaList leadingTrivia;
-                            if (oldWhitespaceTrivia == null || oldWhitespaceTrivia.IsKind(SyntaxKind.None))
-                            {
-                                leadingTrivia = lambda.Body.GetLeadingTrivia().Add(newWhitespaceTrivia);
-                            }
-                            else
-                            {
-                                leadingTrivia = lambda.Body.GetLeadingTrivia().Replace(oldWhitespaceTrivia, newWhitespaceTrivia);
-                            }
-
-                            lambda = lambda.WithBody(lambda.Body.WithLeadingTrivia(leadingTrivia));
-                            newArgument = newArgument.WithExpression(lambda);
-                        }
-                    }
-
-                    var nestedInvocationExpressions = newArgument.DescendantNodes(x => !x.IsKind(SyntaxKind.ArgumentList)).OfType<InvocationExpressionSyntax>().ToList();
-                    var newNestedInvocationExpressions = Helper(nestedInvocationExpressions).ToList();
-                    for (int i = 0; i < nestedInvocationExpressions.Count; ++i)
-                    {
-                        newArgument = newArgument.ReplaceNode(nestedInvocationExpressions[i], newNestedInvocationExpressions[i]);
-                    }
-
-                    var newArguments = arguments.Replace(argument, newArgument);
-                    var newArgumentList = newInvocationExpression.ArgumentList.WithArguments(newArguments);
-                    newInvocationExpression = newInvocationExpression.WithArgumentList(newArgumentList);
                 }
 
-                newInvocationExpressions.Add(newInvocationExpression);
+                var argumentInvocationExpression = newArgument.Expression as InvocationExpressionSyntax;
+                if (argumentInvocationExpression != null)
+                {
+                    argumentInvocationExpression = InvocationExpressionHelper(argumentInvocationExpression);
+                    newArgument = newArgument.WithExpression(argumentInvocationExpression);
+                }
+
+                newArguments = newArguments.Replace(argument, newArgument);
             }
 
-            return newInvocationExpressions;
+            return argumentList.WithArguments(newArguments);
         }
     }
 }
