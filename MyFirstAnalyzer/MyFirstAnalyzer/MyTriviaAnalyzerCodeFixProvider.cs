@@ -146,7 +146,7 @@ namespace MyFirstAnalyzer
 
                         var argumentLeadingWhitespaceLength = newArgument.GetLeadingTrivia().First(x => x.IsKind(SyntaxKind.WhitespaceTrivia)).Span.Length;
                         oldWhitespaceTrivia = lambda.Body.GetLeadingTrivia().FirstOrDefault(x => x.IsKind(SyntaxKind.WhitespaceTrivia));
-                        if (oldWhitespaceTrivia != null || oldWhitespaceTrivia.Span.Length != argumentLeadingWhitespaceLength + 4)
+                        if (oldWhitespaceTrivia == null || oldWhitespaceTrivia.Span.Length != argumentLeadingWhitespaceLength + 4)
                         {
                             var newWhitespaceTrivia = SyntaxFactory.SyntaxTrivia(SyntaxKind.WhitespaceTrivia, new string(' ', argumentLeadingWhitespaceLength + 4));
                             SyntaxTriviaList leadingTrivia;
