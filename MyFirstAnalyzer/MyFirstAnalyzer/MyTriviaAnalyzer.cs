@@ -38,6 +38,8 @@ namespace MyFirstAnalyzer
 
         private static void Helper(SyntaxNodeAnalysisContext context, IEnumerable<InvocationExpressionSyntax> invocationExpressions)
         {
+            var expressionStatement = (ExpressionStatementSyntax)context.Node;
+
             foreach (var invocationExpression in invocationExpressions)
             {
                 var memberAccessExpression = invocationExpression.Expression as MemberAccessExpressionSyntax;
@@ -49,7 +51,7 @@ namespace MyFirstAnalyzer
                 var invocationLeadingWhitespaceLength = invocationExpression.GetLeadingTrivia().FirstOrDefault(x => x.IsKind(SyntaxKind.WhitespaceTrivia)).Span.Length;
                 if (!memberAccessExpression.OperatorToken.LeadingTrivia.Any(x => x.IsKind(SyntaxKind.WhitespaceTrivia) && x.Span.Length == invocationLeadingWhitespaceLength + 4))
                 {
-                    context.ReportDiagnostic(Diagnostic.Create(Rule, memberAccessExpression.Name.GetLocation()));
+                    context.ReportDiagnostic(Diagnostic.Create(Rule, expressionStatement.GetLocation()));
                     continue;
                 }
 
@@ -59,7 +61,7 @@ namespace MyFirstAnalyzer
                     var memberAcessLeadingWhitespaceLength = memberAccessExpression.OperatorToken.LeadingTrivia.First(x => x.IsKind(SyntaxKind.WhitespaceTrivia)).Span.Length;
                     if (!argument.GetLeadingTrivia().Any(x => x.IsKind(SyntaxKind.WhitespaceTrivia) && x.Span.Length == memberAcessLeadingWhitespaceLength + 4))
                     {
-                        context.ReportDiagnostic(Diagnostic.Create(Rule, memberAccessExpression.Name.GetLocation()));
+                        context.ReportDiagnostic(Diagnostic.Create(Rule, expressionStatement.GetLocation()));
                         continue;
                     }
 
@@ -72,7 +74,7 @@ namespace MyFirstAnalyzer
                     var argumentLeadingWhitespaceLength = argument.GetLeadingTrivia().First(x => x.IsKind(SyntaxKind.WhitespaceTrivia)).Span.Length;
                     if (!lambda.Body.GetLeadingTrivia().Any(x => x.IsKind(SyntaxKind.WhitespaceTrivia) && x.Span.Length == argumentLeadingWhitespaceLength + 4))
                     {
-                        context.ReportDiagnostic(Diagnostic.Create(Rule, memberAccessExpression.Name.GetLocation()));
+                        context.ReportDiagnostic(Diagnostic.Create(Rule, expressionStatement.GetLocation()));
                         continue;
                     }
 
