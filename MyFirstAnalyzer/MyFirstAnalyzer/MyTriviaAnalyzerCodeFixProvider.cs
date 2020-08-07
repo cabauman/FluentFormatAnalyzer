@@ -114,26 +114,18 @@ namespace MyFirstAnalyzer
             return memberAccessExpression;
         }
 
-        private static ArgumentListSyntax ArgumentListHelper(ArgumentListSyntax argumentList, int parentIndexWidth)
+        private static ArgumentListSyntax ArgumentListHelper(ArgumentListSyntax argumentList, int parentIndentWidth)
         {
-            var oldArgumentTokens = argumentList.ChildTokens().Where(x => !x.IsKind(SyntaxKind.CloseParenToken));
-            if (oldArgumentTokens.All(x => x.TrailingTrivia.SingleOrDefault(trivia => trivia.IsKind(SyntaxKind.EndOfLineTrivia)) != default))
-            {
-                argumentList = argumentList.ReplaceTokens(
-                    oldArgumentTokens,
-                    (original, _) => original.WithTrailingTrivia(new[] { SyntaxFactory.EndOfLine("\n") }));
-            }
-
             var arguments = argumentList.Arguments;
-            var newArguments = arguments;
+            var newArguments = new SeparatedSyntaxList<ArgumentSyntax>();
             foreach (var argument in arguments)
             {
                 ArgumentSyntax newArgument = argument;
 
                 var oldWhitespaceTrivia = newArgument.GetLeadingTrivia().FirstOrDefault(x => x.IsKind(SyntaxKind.WhitespaceTrivia));
-                if (oldWhitespaceTrivia == null || oldWhitespaceTrivia.Span.Length != parentIndexWidth + 4)
+                if (oldWhitespaceTrivia == null || oldWhitespaceTrivia.Span.Length != parentIndentWidth + 4)
                 {
-                    var newWhitespaceTrivia = SyntaxFactory.SyntaxTrivia(SyntaxKind.WhitespaceTrivia, new string(' ', parentIndexWidth + 4));
+                    var newWhitespaceTrivia = SyntaxFactory.SyntaxTrivia(SyntaxKind.WhitespaceTrivia, new string(' ', parentIndentWidth + 4));
                     SyntaxTriviaList leadingTrivia;
                     if (oldWhitespaceTrivia == null || oldWhitespaceTrivia.IsKind(SyntaxKind.None))
                     {
@@ -156,37 +148,101 @@ namespace MyFirstAnalyzer
                         newArgument = newArgument.WithExpression(lambda);
                     }
 
-                    var argumentLeadingWhitespaceLength = newArgument.GetLeadingTrivia().First(x => x.IsKind(SyntaxKind.WhitespaceTrivia)).Span.Length;
-                    oldWhitespaceTrivia = lambda.Body.GetLeadingTrivia().FirstOrDefault(x => x.IsKind(SyntaxKind.WhitespaceTrivia));
-                    if (oldWhitespaceTrivia == null || oldWhitespaceTrivia.Span.Length != argumentLeadingWhitespaceLength + 4)
+                    if (lambda.Body is BlockSyntax block)
                     {
-                        var newWhitespaceTrivia = SyntaxFactory.SyntaxTrivia(SyntaxKind.WhitespaceTrivia, new string(' ', argumentLeadingWhitespaceLength + 4));
-                        SyntaxTriviaList leadingTrivia;
-                        if (oldWhitespaceTrivia == null || oldWhitespaceTrivia.IsKind(SyntaxKind.None))
+                        var lambdaIndentWidth = lambda.GetLeadingTrivia().Span.Length;
+                        var openBrace = block.OpenBraceToken;
+                        var closeBrace = block.CloseBraceToken;
+
+                        oldWhitespaceTrivia = block.OpenBraceToken.LeadingTrivia.FirstOrDefault(x => x.IsKind(SyntaxKind.WhitespaceTrivia));
+                        if (oldWhitespaceTrivia.Span.Length != lambdaIndentWidth)
                         {
-                            leadingTrivia = lambda.Body.GetLeadingTrivia().Add(newWhitespaceTrivia);
-                        }
-                        else
-                        {
-                            leadingTrivia = lambda.Body.GetLeadingTrivia().Replace(oldWhitespaceTrivia, newWhitespaceTrivia);
+                            var newWhitespaceTrivia = SyntaxFactory.SyntaxTrivia(SyntaxKind.WhitespaceTrivia, new string(' ', lambdaIndentWidth));
+                            openBrace = block.OpenBraceToken.WithLeadingTrivia(newWhitespaceTrivia);
                         }
 
-                        lambda = lambda.WithBody(lambda.Body.WithLeadingTrivia(leadingTrivia));
-                        newArgument = newArgument.WithExpression(lambda);
+                        oldWhitespaceTrivia = block.CloseBraceToken.LeadingTrivia.FirstOrDefault(x => x.IsKind(SyntaxKind.WhitespaceTrivia));
+                        if (oldWhitespaceTrivia.Span.Length != lambdaIndentWidth)
+                        {
+                            var newWhitespaceTrivia = SyntaxFactory.SyntaxTrivia(SyntaxKind.WhitespaceTrivia, new string(' ', lambdaIndentWidth));
+                            closeBrace = block.CloseBraceToken.WithLeadingTrivia(newWhitespaceTrivia);
+                        }
+
+                        var newStatements = new SyntaxList<StatementSyntax>();
+                        foreach (var statement in block.Statements)
+                        {
+                            var newWhitespaceTrivia = SyntaxFactory.SyntaxTrivia(SyntaxKind.WhitespaceTrivia, new string(' ', lambdaIndentWidth + 4));
+                            var newStatement = statement.WithLeadingTrivia(newWhitespaceTrivia);
+                            newStatements = newStatements.Add(newStatement);
+                        }
+
+                        newArgument = newArgument.WithExpression(
+                            lambda.WithBody(
+                                block
+                                    .WithStatements(newStatements)
+                                    .WithOpenBraceToken(openBrace)
+                                    .WithCloseBraceToken(closeBrace)));
+
+                        //var argumentInvocationExpression1 = newArgument.Expression as InvocationExpressionSyntax;
+                        //if (argumentInvocationExpression1 != null)
+                        //{
+                        //    argumentInvocationExpression1 = InvocationExpressionHelper(argumentInvocationExpression1);
+                        //    newArgument = newArgument.WithExpression(argumentInvocationExpression1);
+                        //}
+                    }
+                    else
+                    {
+                        var argumentLeadingWhitespaceLength = newArgument.GetLeadingTrivia().First(x => x.IsKind(SyntaxKind.WhitespaceTrivia)).Span.Length;
+                        oldWhitespaceTrivia = lambda.Body.GetLeadingTrivia().FirstOrDefault(x => x.IsKind(SyntaxKind.WhitespaceTrivia));
+                        if (oldWhitespaceTrivia == null || oldWhitespaceTrivia.Span.Length != argumentLeadingWhitespaceLength + 4)
+                        {
+                            var newWhitespaceTrivia = SyntaxFactory.SyntaxTrivia(SyntaxKind.WhitespaceTrivia, new string(' ', argumentLeadingWhitespaceLength + 4));
+                            SyntaxTriviaList leadingTrivia;
+                            if (oldWhitespaceTrivia == null || oldWhitespaceTrivia.IsKind(SyntaxKind.None))
+                            {
+                                leadingTrivia = lambda.Body.GetLeadingTrivia().Add(newWhitespaceTrivia);
+                            }
+                            else
+                            {
+                                leadingTrivia = lambda.Body.GetLeadingTrivia().Replace(oldWhitespaceTrivia, newWhitespaceTrivia);
+                            }
+
+                            lambda = lambda.WithBody(lambda.Body.WithLeadingTrivia(leadingTrivia));
+                            newArgument = newArgument.WithExpression(lambda);
+                        }
+
+                        //var temp = lambda.Body.DescendantNodes(x => x.Parent.IsEquivalentTo(lambda.Body));
+                        var argumentInvocationExpression = lambda.Body as InvocationExpressionSyntax;
+                        if (argumentInvocationExpression != null)
+                        {
+                            argumentInvocationExpression = InvocationExpressionHelper(argumentInvocationExpression);
+                            newArgument = newArgument.WithExpression(
+                                lambda.WithBody(
+                                    argumentInvocationExpression));
+                        }
                     }
                 }
 
-                var argumentInvocationExpression = newArgument.Expression as InvocationExpressionSyntax;
-                if (argumentInvocationExpression != null)
-                {
-                    argumentInvocationExpression = InvocationExpressionHelper(argumentInvocationExpression);
-                    newArgument = newArgument.WithExpression(argumentInvocationExpression);
-                }
+                //new[] { 1 }.Where(
+                //    x =>
+                //    {
+                //        return x > 1;
+                //    });
 
-                newArguments = newArguments.Replace(argument, newArgument);
+                newArguments = newArguments.Add(newArgument);
             }
 
-            return argumentList.WithArguments(newArguments);
+            argumentList = argumentList.WithArguments(newArguments);
+
+            var oldArgumentTokens = argumentList.ChildTokens().Where(x => !x.IsKind(SyntaxKind.CloseParenToken));
+            if (!oldArgumentTokens.All(x => x.TrailingTrivia.Any(trivia => trivia.IsKind(SyntaxKind.EndOfLineTrivia))))
+            {
+                argumentList = argumentList.ReplaceTokens(
+                    oldArgumentTokens,
+                    (original, _) => original.WithTrailingTrivia(new[] { SyntaxFactory.EndOfLine("\n") }));
+            }
+
+            return argumentList;
         }
     }
 }

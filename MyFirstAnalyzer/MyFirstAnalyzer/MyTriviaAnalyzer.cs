@@ -26,7 +26,9 @@ namespace MyFirstAnalyzer
         {
             context.EnableConcurrentExecution();
             context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
-            context.RegisterSyntaxNodeAction(AnalyzeMethodDeclaration, SyntaxKind.ExpressionStatement);
+            context.RegisterSyntaxNodeAction(
+                AnalyzeMethodDeclaration,
+                SyntaxKind.ExpressionStatement/*, SyntaxKind.LocalDeclarationStatement, SyntaxKind.ReturnStatement*/);
         }
 
         private static void AnalyzeMethodDeclaration(SyntaxNodeAnalysisContext context)
@@ -72,7 +74,16 @@ namespace MyFirstAnalyzer
                     }
 
                     var argumentLeadingWhitespaceLength = argument.GetLeadingTrivia().First(x => x.IsKind(SyntaxKind.WhitespaceTrivia)).Span.Length;
-                    if (!lambda.Body.GetLeadingTrivia().Any(x => x.IsKind(SyntaxKind.WhitespaceTrivia) && x.Span.Length == argumentLeadingWhitespaceLength + 4))
+                    if (lambda.Body is BlockSyntax block)
+                    {
+                        if (!block.OpenBraceToken.LeadingTrivia.Any(x => x.IsKind(SyntaxKind.WhitespaceTrivia) && x.Span.Length == argumentLeadingWhitespaceLength) ||
+                            !block.CloseBraceToken.LeadingTrivia.Any(x => x.IsKind(SyntaxKind.WhitespaceTrivia) && x.Span.Length == argumentLeadingWhitespaceLength))
+                        {
+                            context.ReportDiagnostic(Diagnostic.Create(Rule, expressionStatement.GetLocation()));
+                            continue;
+                        }
+                    }
+                    else if (!lambda.Body.GetLeadingTrivia().Any(x => x.IsKind(SyntaxKind.WhitespaceTrivia) && x.Span.Length == argumentLeadingWhitespaceLength + 4))
                     {
                         context.ReportDiagnostic(Diagnostic.Create(Rule, expressionStatement.GetLocation()));
                         continue;
