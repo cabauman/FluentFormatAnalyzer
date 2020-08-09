@@ -1,7 +1,7 @@
 ﻿using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace MyFirstAnalyzer
+namespace FluentFormatAnalyzer
 {
     public class StatementSyntaxVisitor : CSharpSyntaxVisitor<StatementSyntax>
     {

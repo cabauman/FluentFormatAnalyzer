@@ -8,10 +8,10 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 
-namespace MyFirstAnalyzer
+namespace FluentFormatAnalyzer
 {
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class MyTriviaAnalyzer : DiagnosticAnalyzer
+    public class LineBreakMultipleArgsAndChainedMemberAccessAnalyzer : DiagnosticAnalyzer
     {
         public const string DiagnosticId = "MyTriviaAnalyzer";
         internal static readonly LocalizableString Title = "MyTriviaAnalyzer Title";
@@ -34,6 +34,8 @@ namespace MyFirstAnalyzer
         private static void AnalyzeMethodDeclaration(SyntaxNodeAnalysisContext context)
         {
             var expressionStatement = (ExpressionStatementSyntax)context.Node;
+            //context.ReportDiagnostic(Diagnostic.Create(Rule, expressionStatement.GetLocation()));
+            //return;
             var invocationExpressions = expressionStatement.DescendantNodes(x => !x.IsKind(SyntaxKind.ArgumentList)).OfType<InvocationExpressionSyntax>();
             Helper(context, invocationExpressions);
         }

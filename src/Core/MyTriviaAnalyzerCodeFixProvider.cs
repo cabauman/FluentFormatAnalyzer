@@ -8,7 +8,7 @@ using Microsoft.CodeAnalysis.CodeFixes;
 using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace MyFirstAnalyzer
+namespace FluentFormatAnalyzer
 {
     [ExportCodeFixProvider(LanguageNames.CSharp, Name = nameof(MyTriviaAnalyzerCodeFixProvider)), Shared]
     public class MyTriviaAnalyzerCodeFixProvider : CodeFixProvider
@@ -17,7 +17,7 @@ namespace MyFirstAnalyzer
 
         public sealed override ImmutableArray<string> FixableDiagnosticIds
         {
-            get { return ImmutableArray.Create(MyTriviaAnalyzer.DiagnosticId); }
+            get { return ImmutableArray.Create(LineBreakEveryArgAndMemberAccessAnalyzer.DiagnosticId); }
         }
 
         public sealed override FixAllProvider GetFixAllProvider()

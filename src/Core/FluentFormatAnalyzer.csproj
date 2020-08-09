@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
@@ -8,18 +8,20 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <PackageId>MyFirstAnalyzer</PackageId>
-    <PackageVersion>1.0.0.0</PackageVersion>
-    <Authors>Calm</Authors>
+    <PackageId>FluentFormatAnalyzer</PackageId>
+    <PackageVersion>0.1.0</PackageVersion>
+    <Authors>Colt Alan Bauman</Authors>
     <PackageLicenseUrl>http://LICENSE_URL_HERE_OR_DELETE_THIS_LINE</PackageLicenseUrl>
-    <PackageProjectUrl>http://PROJECT_URL_HERE_OR_DELETE_THIS_LINE</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/cabauman/FluentFormatAnalyzer</PackageProjectUrl>
     <PackageIconUrl>http://ICON_URL_HERE_OR_DELETE_THIS_LINE</PackageIconUrl>
-    <RepositoryUrl>http://REPOSITORY_URL_HERE_OR_DELETE_THIS_LINE</RepositoryUrl>
+    <RepositoryUrl>https://github.com/cabauman/FluentFormatAnalyzer</RepositoryUrl>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <Description>MyFirstAnalyzer</Description>
-    <PackageReleaseNotes>Summary of changes made in this release of the package.</PackageReleaseNotes>
+    <Description>A Roslyn analyzer that utilizes line breaks and indentation to format fluent-API-esque code (Rx, Linq, etc), resulting in a clean and consistent and style.</Description>
+    <PackageReleaseNotes>
+- Initial release.
+    </PackageReleaseNotes>
     <Copyright>Copyright</Copyright>
-    <PackageTags>MyFirstAnalyzer, analyzers</PackageTags>
+    <PackageTags>FluentFormatAnalyzer, analyzers</PackageTags>
     <NoPackageAnalysis>true</NoPackageAnalysis>
   </PropertyGroup>
 
@@ -35,6 +37,7 @@
 
   <ItemGroup>
     <None Update="tools\*.ps1" CopyToOutputDirectory="Always" Pack="true" PackagePath="" />
+    <None Remove="bin\Debug\netstandard2.0\\FluentFormat.dll" />
     <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
   </ItemGroup>
 

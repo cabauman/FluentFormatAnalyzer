@@ -13,7 +13,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Rename;
 using Microsoft.CodeAnalysis.Text;
 
-namespace MyFirstAnalyzer
+namespace FluentFormatAnalyzer
 {
     [ExportCodeFixProvider(LanguageNames.CSharp, Name = nameof(MyFirstAnalyzerCodeFixProvider)), Shared]
     public class MyFirstAnalyzerCodeFixProvider : CodeFixProvider
@@ -22,7 +22,7 @@ namespace MyFirstAnalyzer
 
         public sealed override ImmutableArray<string> FixableDiagnosticIds
         {
-            get { return ImmutableArray.Create(MyFirstAnalyzerAnalyzer.DiagnosticId); }
+            get { return ImmutableArray.Create(MyFirstAnalyzer.DiagnosticId); }
         }
 
         public sealed override FixAllProvider GetFixAllProvider()

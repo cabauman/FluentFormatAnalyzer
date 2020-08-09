@@ -1,17 +1,12 @@
-using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Threading;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 
-namespace MyFirstAnalyzer
+namespace FluentFormatAnalyzer
 {
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class MyFirstAnalyzerAnalyzer : DiagnosticAnalyzer
+    public class MyFirstAnalyzer : DiagnosticAnalyzer
     {
         public const string DiagnosticId = "MyFirstAnalyzer";
 
@@ -28,6 +23,7 @@ namespace MyFirstAnalyzer
 
         public override void Initialize(AnalysisContext context)
         {
+            context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
             // TODO: Consider registering other actions that act on syntax instead of or in addition to symbols
             // See https://github.com/dotnet/roslyn/blob/master/docs/analyzers/Analyzer%20Actions%20Semantics.md for more information
             context.RegisterSymbolAction(AnalyzeSymbol, SymbolKind.NamedType);

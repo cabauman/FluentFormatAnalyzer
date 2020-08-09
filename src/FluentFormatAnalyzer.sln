@@ -3,11 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.30128.74
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyFirstAnalyzer", "MyFirstAnalyzer\MyFirstAnalyzer\MyFirstAnalyzer.csproj", "{870F2BC7-3227-4231-800E-046982B21ABF}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FluentFormatAnalyzer", "Core\FluentFormatAnalyzer.csproj", "{870F2BC7-3227-4231-800E-046982B21ABF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyFirstAnalyzer.Test", "MyFirstAnalyzer\MyFirstAnalyzer.Test\MyFirstAnalyzer.Test.csproj", "{99F8339B-940F-49EB-B8B9-1019C31B8CA2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FluentFormatAnalyzer.Tests", "Tests\FluentFormatAnalyzer.Tests.csproj", "{99F8339B-940F-49EB-B8B9-1019C31B8CA2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyFirstAnalyzer.Vsix", "MyFirstAnalyzer\MyFirstAnalyzer.Vsix\MyFirstAnalyzer.Vsix.csproj", "{A1ED7005-EA92-483E-9496-3CCD3EE2CFB3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FluentFormatAnalyzer.Vsix", "Vsix\FluentFormatAnalyzer.Vsix.csproj", "{A1ED7005-EA92-483E-9496-3CCD3EE2CFB3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

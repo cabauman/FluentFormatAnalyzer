@@ -1,27 +1,38 @@
-﻿using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CodeFixes;
-using Microsoft.CodeAnalysis.Diagnostics;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System;
-using System.Threading;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Threading.Tasks;
-using MyFirstAnalyzer;
 using Verify = Microsoft.CodeAnalysis.CSharp.Testing.MSTest.CodeFixVerifier<
-    MyFirstAnalyzer.MyFirstAnalyzerAnalyzer,
-    MyFirstAnalyzer.MyFirstAnalyzerCodeFixProvider>;
+    FluentFormatAnalyzer.LineBreakEveryArgAndMemberAccessAnalyzer,
+    FluentFormatAnalyzer.MyFirstAnalyzerCodeFixProvider>;
 
-namespace MyFirstAnalyzer.Test
+namespace FluentFormatAnalyzer.Tests
 {
     [TestClass]
-    public class UnitTest
+    public class FluentFormatAnalyzerTests
     {
         //No diagnostics expected to show up
         [TestMethod]
         public async Task TestMethod1()
         {
-            var test = @"";
+            var test = @"
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Text;
+    using System.Threading.Tasks;
+    using System.Diagnostics;
 
-            await Verify.VerifyAnalyzerAsync(test);
+    namespace ConsoleApplication1
+    {
+        class TypeName
+        {
+            Console.WriteLine(""Hello, world."");
+        }
+    }";
+
+            var fixtest = test;
+
+            var expected = Verify.Diagnostic("MyTriviaAnalyzer").WithLocation(11, 15).WithArguments("TypeName");
+            await Verify.VerifyCodeFixAsync(test, expected, fixtest);
         }
 
         //Diagnostic and CodeFix both triggered and checked for

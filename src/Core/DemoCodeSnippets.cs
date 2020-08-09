@@ -11,7 +11,11 @@ namespace ConsoleApp1
         {
             var list = new[] { 1 };
 
-            var a = list.Where(x => x > 1);
+            var abc = list.Where(x => x > 1);
+
+            TestMethod(
+                abc)
+                .Where(x => x > 1);
 
             list
                 .Select(
@@ -49,7 +53,7 @@ namespace ConsoleApp1
                 });
         }
 
-        private static IEnumerable<int> TestMethod(int[] list)
+        private static IEnumerable<int> TestMethod(IEnumerable<int> list)
         {
             return list.Where(x => x > 1);
         }
