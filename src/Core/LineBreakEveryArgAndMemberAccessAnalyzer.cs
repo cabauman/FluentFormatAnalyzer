@@ -25,7 +25,7 @@ namespace FluentFormatAnalyzer
         public override void Initialize(AnalysisContext context)
         {
             context.EnableConcurrentExecution();
-            context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
+            //context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
             context.RegisterSyntaxNodeAction(
                 AnalyzeMethodDeclaration,
                 SyntaxKind.ExpressionStatement/*, SyntaxKind.LocalDeclarationStatement, SyntaxKind.ReturnStatement*/);

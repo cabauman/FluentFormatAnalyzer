@@ -10,8 +10,8 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace FluentFormatAnalyzer
 {
-    [ExportCodeFixProvider(LanguageNames.CSharp, Name = nameof(MyTriviaAnalyzerCodeFixProvider)), Shared]
-    public class MyTriviaAnalyzerCodeFixProvider : CodeFixProvider
+    [ExportCodeFixProvider(LanguageNames.CSharp, Name = nameof(LineBreakEveryArgAndMemberAccessAnalyzerCodeFixProvider)), Shared]
+    public class LineBreakEveryArgAndMemberAccessAnalyzerCodeFixProvider : CodeFixProvider
     {
         private const string title = "Format Expression";
 

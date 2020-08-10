@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
   <Metadata>
-    <Identity Id="FluentFormatAnalyzer.ce1763c4-8f49-4bee-83fd-a5961bf3863c" Version="1.0" Language="en-US" Publisher="Colt Alan Bauman"/>
+    <Identity Id="FluentFormatAnalyzer.ce1763c4-8f49-4bee-83fd-a5961bf3863c" Version="0.1.0" Language="en-US" Publisher="Colt Alan Bauman"/>
     <DisplayName>FluentFormatAnalyzer</DisplayName>
     <Description xml:space="preserve">A Roslyn analyzer that utilizes line breaks and indentation to format fluent-API-esque code (Rx, Linq, etc), resulting in a clean and consistent and style.</Description>
   </Metadata>
