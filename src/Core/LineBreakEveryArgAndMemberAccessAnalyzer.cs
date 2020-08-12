@@ -28,22 +28,17 @@ namespace FluentFormatAnalyzer
             context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
             context.RegisterSyntaxNodeAction(
                 AnalyzeMethodDeclaration,
-                SyntaxKind.ExpressionStatement/*, SyntaxKind.LocalDeclarationStatement, SyntaxKind.ReturnStatement*/);
+                SyntaxKind.ExpressionStatement, SyntaxKind.LocalDeclarationStatement, SyntaxKind.ReturnStatement);
         }
 
         private static void AnalyzeMethodDeclaration(SyntaxNodeAnalysisContext context)
         {
-            var expressionStatement = (ExpressionStatementSyntax)context.Node;
-            //context.ReportDiagnostic(Diagnostic.Create(Rule, expressionStatement.GetLocation()));
-            //return;
-            var invocationExpressions = expressionStatement.DescendantNodes(x => !x.IsKind(SyntaxKind.ArgumentList)).OfType<InvocationExpressionSyntax>();
-            Helper(context, invocationExpressions);
+            var invocationExpressions = context.Node.DescendantNodes(x => !x.IsKind(SyntaxKind.ArgumentList)).OfType<InvocationExpressionSyntax>();
+            Helper(context, invocationExpressions, false);
         }
 
-        private static void Helper(SyntaxNodeAnalysisContext context, IEnumerable<InvocationExpressionSyntax> invocationExpressions)
+        private static void Helper(SyntaxNodeAnalysisContext context, IEnumerable<InvocationExpressionSyntax> invocationExpressions, bool isArgumentDescendant)
         {
-            var expressionStatement = (ExpressionStatementSyntax)context.Node;
-
             foreach (var invocationExpression in invocationExpressions)
             {
                 var memberAccessExpression = invocationExpression.Expression as MemberAccessExpressionSyntax;
@@ -52,10 +47,15 @@ namespace FluentFormatAnalyzer
                     continue;
                 }
 
-                var invocationLeadingWhitespaceLength = invocationExpression.GetLeadingTrivia().FirstOrDefault(x => x.IsKind(SyntaxKind.WhitespaceTrivia)).Span.Length;
+                var invocationLeadingWhitespaceLength = context.Node.GetLeadingTrivia().FirstOrDefault(x => x.IsKind(SyntaxKind.WhitespaceTrivia)).Span.Length;
+                if (isArgumentDescendant)
+                {
+                    invocationLeadingWhitespaceLength = invocationExpression.GetLeadingTrivia().FirstOrDefault(x => x.IsKind(SyntaxKind.WhitespaceTrivia)).Span.Length;
+                }
+
                 if (!memberAccessExpression.OperatorToken.LeadingTrivia.Any(x => x.IsKind(SyntaxKind.WhitespaceTrivia) && x.Span.Length == invocationLeadingWhitespaceLength + 4))
                 {
-                    context.ReportDiagnostic(Diagnostic.Create(Rule, expressionStatement.GetLocation()));
+                    context.ReportDiagnostic(Diagnostic.Create(Rule, context.Node.GetLocation()));
                     continue;
                 }
 
@@ -65,7 +65,7 @@ namespace FluentFormatAnalyzer
                     var memberAcessLeadingWhitespaceLength = memberAccessExpression.OperatorToken.LeadingTrivia.First(x => x.IsKind(SyntaxKind.WhitespaceTrivia)).Span.Length;
                     if (!argument.GetLeadingTrivia().Any(x => x.IsKind(SyntaxKind.WhitespaceTrivia) && x.Span.Length == memberAcessLeadingWhitespaceLength + 4))
                     {
-                        context.ReportDiagnostic(Diagnostic.Create(Rule, expressionStatement.GetLocation()));
+                        context.ReportDiagnostic(Diagnostic.Create(Rule, context.Node.GetLocation()));
                         continue;
                     }
 
@@ -81,18 +81,18 @@ namespace FluentFormatAnalyzer
                         if (!block.OpenBraceToken.LeadingTrivia.Any(x => x.IsKind(SyntaxKind.WhitespaceTrivia) && x.Span.Length == argumentLeadingWhitespaceLength) ||
                             !block.CloseBraceToken.LeadingTrivia.Any(x => x.IsKind(SyntaxKind.WhitespaceTrivia) && x.Span.Length == argumentLeadingWhitespaceLength))
                         {
-                            context.ReportDiagnostic(Diagnostic.Create(Rule, expressionStatement.GetLocation()));
+                            context.ReportDiagnostic(Diagnostic.Create(Rule, context.Node.GetLocation()));
                             continue;
                         }
                     }
                     else if (!lambda.Body.GetLeadingTrivia().Any(x => x.IsKind(SyntaxKind.WhitespaceTrivia) && x.Span.Length == argumentLeadingWhitespaceLength + 4))
                     {
-                        context.ReportDiagnostic(Diagnostic.Create(Rule, expressionStatement.GetLocation()));
+                        context.ReportDiagnostic(Diagnostic.Create(Rule, context.Node.GetLocation()));
                         continue;
                     }
 
                     var nestedInvocationExpressions = argument.DescendantNodes(x => !x.IsKind(SyntaxKind.ArgumentList)).OfType<InvocationExpressionSyntax>();
-                    Helper(context, nestedInvocationExpressions);
+                    Helper(context, nestedInvocationExpressions, true);
                 }
             }
         }

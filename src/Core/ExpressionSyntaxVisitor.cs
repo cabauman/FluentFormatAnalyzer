@@ -24,6 +24,28 @@ namespace FluentFormatAnalyzer
             var newArguments = new SeparatedSyntaxList<ArgumentSyntax>();
 
             var parentIndentWidth = node.Parent.GetLeadingTrivia().FirstOrDefault(x => x.IsKind(SyntaxKind.WhitespaceTrivia)).Span.Length;
+
+            var returnStatement = node.FirstAncestorOrSelf<ReturnStatementSyntax>();
+            if (returnStatement != null)
+            {
+                parentIndentWidth = returnStatement
+                    .ReturnKeyword
+                    .LeadingTrivia
+                    .FirstOrDefault(x => x.IsKind(SyntaxKind.WhitespaceTrivia))
+                    .Span
+                    .Length;
+            }
+
+            var localDeclarationStatement = node.FirstAncestorOrSelf<LocalDeclarationStatementSyntax>();
+            if (localDeclarationStatement != null)
+            {
+                parentIndentWidth = localDeclarationStatement
+                    .GetLeadingTrivia()
+                    .FirstOrDefault(x => x.IsKind(SyntaxKind.WhitespaceTrivia))
+                    .Span
+                    .Length;
+            }
+
             var argumentIndentWidth = isMemberAccess ? parentIndentWidth + 8 : parentIndentWidth + 4;
 
             foreach (var argument in node.Arguments)
@@ -68,6 +90,27 @@ namespace FluentFormatAnalyzer
                 .FirstOrDefault(x => x.IsKind(SyntaxKind.WhitespaceTrivia))
                 .Span
                 .Length;
+
+            var returnStatement = node.FirstAncestorOrSelf<ReturnStatementSyntax>();
+            if (returnStatement != null)
+            {
+                parentIndentWidth = returnStatement
+                    .ReturnKeyword
+                    .LeadingTrivia
+                    .FirstOrDefault(x => x.IsKind(SyntaxKind.WhitespaceTrivia))
+                    .Span
+                    .Length;
+            }
+
+            var localDeclarationStatement = node.FirstAncestorOrSelf<LocalDeclarationStatementSyntax>();
+            if (localDeclarationStatement != null)
+            {
+                parentIndentWidth = localDeclarationStatement
+                    .GetLeadingTrivia()
+                    .FirstOrDefault(x => x.IsKind(SyntaxKind.WhitespaceTrivia))
+                    .Span
+                    .Length;
+            }
 
             if (!node.Expression.GetTrailingTrivia().Any(x => x.IsKind(SyntaxKind.EndOfLineTrivia)))
             {
@@ -128,14 +171,19 @@ namespace FluentFormatAnalyzer
             if (oldWhitespaceTrivia.Span.Length != parentIndentWidth)
             {
                 var newWhitespaceTrivia = SyntaxFactory.SyntaxTrivia(SyntaxKind.WhitespaceTrivia, new string(' ', parentIndentWidth));
-                openBrace = node.OpenBraceToken.WithLeadingTrivia(newWhitespaceTrivia);
+                openBrace = openBrace
+                    .WithLeadingTrivia(newWhitespaceTrivia)
+                    .WithTrailingTrivia(SyntaxFactory.LineFeed);
             }
 
             oldWhitespaceTrivia = node.CloseBraceToken.LeadingTrivia.FirstOrDefault(x => x.IsKind(SyntaxKind.WhitespaceTrivia));
             if (oldWhitespaceTrivia.Span.Length != parentIndentWidth)
             {
                 var newWhitespaceTrivia = SyntaxFactory.SyntaxTrivia(SyntaxKind.WhitespaceTrivia, new string(' ', parentIndentWidth));
-                closeBrace = node.CloseBraceToken.WithLeadingTrivia(newWhitespaceTrivia);
+                closeBrace = closeBrace
+                    .WithLeadingTrivia(
+                        SyntaxFactory.LineFeed,
+                        newWhitespaceTrivia);
             }
 
             var newStatements = new SyntaxList<StatementSyntax>();

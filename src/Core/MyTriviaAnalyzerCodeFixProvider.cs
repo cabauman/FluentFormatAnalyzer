@@ -34,7 +34,7 @@ namespace FluentFormatAnalyzer
             var diagnosticSpan = diagnostic.Location.SourceSpan;
 
             // Find the type declaration identified by the diagnostic.
-            var expressionStatement = root.FindToken(diagnosticSpan.Start).Parent.AncestorsAndSelf().OfType<ExpressionStatementSyntax>().First();
+            var expressionStatement = root.FindToken(diagnosticSpan.Start).Parent.AncestorsAndSelf().OfType<StatementSyntax>().First();
 
             // Register a code action that will invoke the fix.
             context.RegisterCodeFix(
@@ -45,7 +45,7 @@ namespace FluentFormatAnalyzer
                 diagnostic);
         }
 
-        private async Task<Document> ApplyFormattingAsync(Document document, ExpressionStatementSyntax expressionStatement, CancellationToken ct)
+        private async Task<Document> ApplyFormattingAsync(Document document, StatementSyntax expressionStatement, CancellationToken ct)
         {
             var visitor = new StatementSyntaxVisitor(new ExpressionSyntaxVisitor());
             var formattedExpressionStatement = expressionStatement.Accept(visitor);
