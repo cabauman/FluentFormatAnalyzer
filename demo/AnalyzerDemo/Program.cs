@@ -17,7 +17,20 @@ namespace AnalyzerDemo
                     x =>
                         x > list.First() ? 2 : 0);
 
-            TestMethod(abc)?.Where(x => x < 10);
+            (1, 2)
+                .ToString();
+
+            TestMethod(list)?.Where(x => x < 10);
+
+            TestMethod(
+                list)?
+                .Where(
+                    x =>
+                        EqualityComparer<int>
+                            .Default
+                            .GetHashCode(
+                                (list.Skip(1).Last(), 2)
+                                    .Item1) < 10);
 
             list
                 .Select(
