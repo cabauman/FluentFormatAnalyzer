@@ -7,39 +7,41 @@ namespace FluentFormatAnalyzer
 {
     public class ExpressionSyntaxVisitor : CSharpSyntaxVisitor<ExpressionSyntax>
     {
-        public override ExpressionSyntax Visit(SyntaxNode node)
-        {
-            return base.Visit(node);
-        }
-
         public override ExpressionSyntax VisitInvocationExpression(InvocationExpressionSyntax node)
         {
             return node
                 .WithExpression(Visit(node.Expression))
-                .WithArgumentList(UpdateArgumentList(node.ArgumentList, node.Expression.IsKind(SyntaxKind.SimpleMemberAccessExpression)));
+                .WithArgumentList(
+                    UpdateArgumentList(
+                        node.ArgumentList,
+                        node.Expression.IsKind(SyntaxKind.SimpleMemberAccessExpression) || node.Expression.IsKind(SyntaxKind.MemberBindingExpression)));
         }
 
         public ArgumentListSyntax UpdateArgumentList(ArgumentListSyntax node, bool isMemberAccess)
         {
             var newArguments = new SeparatedSyntaxList<ArgumentSyntax>();
 
-            var parentIndentWidth = node.Parent.GetLeadingTrivia().FirstOrDefault(x => x.IsKind(SyntaxKind.WhitespaceTrivia)).Span.Length;
+            var parentIndentWidth = node
+                .Parent
+                .GetLeadingTrivia()
+                .FirstOrDefault(x => x.IsKind(SyntaxKind.WhitespaceTrivia))
+                .Span
+                .Length;
 
-            var returnStatement = node.FirstAncestorOrSelf<ReturnStatementSyntax>();
-            if (returnStatement != null)
+            var conditionalAccessExpression = node.FirstAncestorOrSelf<ConditionalAccessExpressionSyntax>();
+            if (conditionalAccessExpression != null)
             {
-                parentIndentWidth = returnStatement
-                    .ReturnKeyword
-                    .LeadingTrivia
+                parentIndentWidth = conditionalAccessExpression
+                    .GetLeadingTrivia()
                     .FirstOrDefault(x => x.IsKind(SyntaxKind.WhitespaceTrivia))
                     .Span
                     .Length;
             }
 
-            var localDeclarationStatement = node.FirstAncestorOrSelf<LocalDeclarationStatementSyntax>();
-            if (localDeclarationStatement != null)
+            var ancestorStatement = node.FirstAncestorOrSelf<StatementSyntax>();
+            if (ancestorStatement != null)
             {
-                parentIndentWidth = localDeclarationStatement
+                parentIndentWidth = ancestorStatement
                     .GetLeadingTrivia()
                     .FirstOrDefault(x => x.IsKind(SyntaxKind.WhitespaceTrivia))
                     .Span
@@ -85,11 +87,70 @@ namespace FluentFormatAnalyzer
         {
             node = node.WithExpression(Visit(node.Expression));
 
+            var indentWidth = node
+                .GetLeadingTrivia()
+                .FirstOrDefault(x => x.IsKind(SyntaxKind.WhitespaceTrivia))
+                .Span
+                .Length;
+
+            var ancestorStatement = node.FirstAncestorOrSelf<StatementSyntax>();
+            if (ancestorStatement != null)
+            {
+                indentWidth = ancestorStatement
+                    .GetLeadingTrivia()
+                    .FirstOrDefault(x => x.IsKind(SyntaxKind.WhitespaceTrivia))
+                    .Span
+                    .Length;
+            }
+
+            if (!node.Expression.GetTrailingTrivia().Any(x => x.IsKind(SyntaxKind.EndOfLineTrivia)))
+            {
+                node = node.WithExpression(
+                    node.Expression.WithTrailingTrivia(
+                        new[] { SyntaxFactory.EndOfLine("\n") }));
+            }
+
+            var oldWhitespaceTrivia = node.OperatorToken.LeadingTrivia.FirstOrDefault(x => x.IsKind(SyntaxKind.WhitespaceTrivia));
+            if (oldWhitespaceTrivia.Span.Length != indentWidth + 4)
+            {
+                var newWhitespaceTrivia = SyntaxFactory.SyntaxTrivia(SyntaxKind.WhitespaceTrivia, new string(' ', indentWidth + 4));
+                node = node
+                    .WithOperatorToken(
+                        node.OperatorToken.WithLeadingTrivia(newWhitespaceTrivia));
+            }
+
+            return node;
+        }
+
+        public override ExpressionSyntax VisitConditionalAccessExpression(ConditionalAccessExpressionSyntax node)
+        {
+            return node
+                .WithExpression(
+                    Visit(node.Expression))
+                .WithOperatorToken(
+                    node.OperatorToken.WithTrailingTrivia(SyntaxFactory.EndOfLine("\n")))
+                .WithWhenNotNull(
+                    Visit(node.WhenNotNull));
+
+        }
+
+        public override ExpressionSyntax VisitMemberBindingExpression(MemberBindingExpressionSyntax node)
+        {
             var parentIndentWidth = node
                 .GetLeadingTrivia()
                 .FirstOrDefault(x => x.IsKind(SyntaxKind.WhitespaceTrivia))
                 .Span
                 .Length;
+
+            var conditionalAccessExpression = node.FirstAncestorOrSelf<ConditionalAccessExpressionSyntax>();
+            if (conditionalAccessExpression != null)
+            {
+                parentIndentWidth = conditionalAccessExpression
+                    .GetLeadingTrivia()
+                    .FirstOrDefault(x => x.IsKind(SyntaxKind.WhitespaceTrivia))
+                    .Span
+                    .Length;
+            }
 
             var returnStatement = node.FirstAncestorOrSelf<ReturnStatementSyntax>();
             if (returnStatement != null)
@@ -112,13 +173,6 @@ namespace FluentFormatAnalyzer
                     .Length;
             }
 
-            if (!node.Expression.GetTrailingTrivia().Any(x => x.IsKind(SyntaxKind.EndOfLineTrivia)))
-            {
-                node = node.WithExpression(
-                    node.Expression.WithTrailingTrivia(
-                        new[] { SyntaxFactory.EndOfLine("\n") }));
-            }
-
             var oldWhitespaceTrivia = node.OperatorToken.LeadingTrivia.FirstOrDefault(x => x.IsKind(SyntaxKind.WhitespaceTrivia));
             if (oldWhitespaceTrivia.Span.Length != parentIndentWidth + 4)
             {
@@ -128,21 +182,6 @@ namespace FluentFormatAnalyzer
                         node.OperatorToken.WithLeadingTrivia(newWhitespaceTrivia));
             }
 
-            return node;
-        }
-
-        public override ExpressionSyntax VisitConditionalAccessExpression(ConditionalAccessExpressionSyntax node)
-        {
-            return node
-                .WithExpression(
-                    Visit(node.Expression))
-                .WithWhenNotNull(
-                    Visit(node.WhenNotNull));
-
-        }
-
-        public override ExpressionSyntax VisitMemberBindingExpression(MemberBindingExpressionSyntax node)
-        {
             return node;
         }
 
@@ -157,6 +196,11 @@ namespace FluentFormatAnalyzer
         }
 
         public override ExpressionSyntax VisitIdentifierName(IdentifierNameSyntax node)
+        {
+            return node;
+        }
+
+        public override ExpressionSyntax VisitGenericName(GenericNameSyntax node)
         {
             return node;
         }
@@ -230,6 +274,11 @@ namespace FluentFormatAnalyzer
                     Visit(node.WhenTrue))
                 .WithWhenFalse(
                     Visit(node.WhenFalse));
+        }
+
+        public override ExpressionSyntax VisitTupleExpression(TupleExpressionSyntax node)
+        {
+            return node;
         }
 
         private ExpressionSyntax VisitLambdaExpression(LambdaExpressionSyntax node)

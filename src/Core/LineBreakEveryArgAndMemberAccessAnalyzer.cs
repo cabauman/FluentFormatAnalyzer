@@ -34,18 +34,26 @@ namespace FluentFormatAnalyzer
         private static void AnalyzeMethodDeclaration(SyntaxNodeAnalysisContext context)
         {
             var invocationExpressions = context.Node.DescendantNodes(x => !x.IsKind(SyntaxKind.ArgumentList)).OfType<InvocationExpressionSyntax>();
-            Helper(context, invocationExpressions, false);
+           Helper(context, invocationExpressions, false);
         }
 
         private static void Helper(SyntaxNodeAnalysisContext context, IEnumerable<InvocationExpressionSyntax> invocationExpressions, bool isArgumentDescendant)
         {
             foreach (var invocationExpression in invocationExpressions)
             {
-                var memberAccessExpression = invocationExpression.Expression as MemberAccessExpressionSyntax;
-                if (memberAccessExpression == null)
+                var operatorTokenLeadingTrivia = default(SyntaxTriviaList);
+                if (invocationExpression.Expression is MemberAccessExpressionSyntax memberAccessExpression)
+                {
+                    operatorTokenLeadingTrivia = memberAccessExpression.OperatorToken.LeadingTrivia;
+                }
+                else if (invocationExpression.Expression is MemberBindingExpressionSyntax memberBindingExpression)
+                {
+                    operatorTokenLeadingTrivia = memberBindingExpression.OperatorToken.LeadingTrivia;
+                }
+                else
                 {
                     continue;
-                }
+                }    
 
                 var invocationLeadingWhitespaceLength = context.Node.GetLeadingTrivia().FirstOrDefault(x => x.IsKind(SyntaxKind.WhitespaceTrivia)).Span.Length;
                 if (isArgumentDescendant)
@@ -53,7 +61,7 @@ namespace FluentFormatAnalyzer
                     invocationLeadingWhitespaceLength = invocationExpression.GetLeadingTrivia().FirstOrDefault(x => x.IsKind(SyntaxKind.WhitespaceTrivia)).Span.Length;
                 }
 
-                if (!memberAccessExpression.OperatorToken.LeadingTrivia.Any(x => x.IsKind(SyntaxKind.WhitespaceTrivia) && x.Span.Length == invocationLeadingWhitespaceLength + 4))
+                if (!operatorTokenLeadingTrivia.Any(x => x.IsKind(SyntaxKind.WhitespaceTrivia) && x.Span.Length == invocationLeadingWhitespaceLength + 4))
                 {
                     context.ReportDiagnostic(Diagnostic.Create(Rule, context.Node.GetLocation()));
                     continue;
@@ -62,11 +70,11 @@ namespace FluentFormatAnalyzer
                 var arguments = invocationExpression.ArgumentList.Arguments;
                 foreach (var argument in arguments)
                 {
-                    var memberAcessLeadingWhitespaceLength = memberAccessExpression.OperatorToken.LeadingTrivia.First(x => x.IsKind(SyntaxKind.WhitespaceTrivia)).Span.Length;
+                    var memberAcessLeadingWhitespaceLength = operatorTokenLeadingTrivia.First(x => x.IsKind(SyntaxKind.WhitespaceTrivia)).Span.Length;
                     if (!argument.GetLeadingTrivia().Any(x => x.IsKind(SyntaxKind.WhitespaceTrivia) && x.Span.Length == memberAcessLeadingWhitespaceLength + 4))
                     {
                         context.ReportDiagnostic(Diagnostic.Create(Rule, context.Node.GetLocation()));
-                        continue;
+                        return;
                     }
 
                     var lambda = argument.Expression as LambdaExpressionSyntax;
@@ -82,13 +90,13 @@ namespace FluentFormatAnalyzer
                             !block.CloseBraceToken.LeadingTrivia.Any(x => x.IsKind(SyntaxKind.WhitespaceTrivia) && x.Span.Length == argumentLeadingWhitespaceLength))
                         {
                             context.ReportDiagnostic(Diagnostic.Create(Rule, context.Node.GetLocation()));
-                            continue;
+                            return;
                         }
                     }
                     else if (!lambda.Body.GetLeadingTrivia().Any(x => x.IsKind(SyntaxKind.WhitespaceTrivia) && x.Span.Length == argumentLeadingWhitespaceLength + 4))
                     {
                         context.ReportDiagnostic(Diagnostic.Create(Rule, context.Node.GetLocation()));
-                        continue;
+                        return;
                     }
 
                     var nestedInvocationExpressions = argument.DescendantNodes(x => !x.IsKind(SyntaxKind.ArgumentList)).OfType<InvocationExpressionSyntax>();
