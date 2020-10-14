@@ -132,30 +132,31 @@ namespace FluentFormatAnalyzer
                 openBrace = node.OpenBraceToken.WithLeadingTrivia(newWhitespaceTrivia);
             }
 
-            //openBrace = openBrace
-            //    .WithTrailingTrivia(SyntaxFactory.EndOfLine("\n"));
+            openBrace = openBrace
+                .WithTrailingTrivia(SyntaxFactory.EndOfLine("\n"));
 
             oldWhitespaceTrivia = node.CloseBraceToken.LeadingTrivia.FirstOrDefault(x => x.IsKind(SyntaxKind.WhitespaceTrivia));
             if (oldWhitespaceTrivia.Span.Length != parentIndentWidth)
             {
                 var newWhitespaceTrivia = SyntaxFactory.SyntaxTrivia(SyntaxKind.WhitespaceTrivia, new string(' ', parentIndentWidth));
-                closeBrace = node.CloseBraceToken
+                closeBrace = closeBrace
                     .WithLeadingTrivia(
+                        SyntaxFactory.EndOfLine("\n"),
                         newWhitespaceTrivia);
             }
 
-            //var newStatements = new SyntaxList<StatementSyntax>();
-            //foreach (var statement in node.Statements)
-            //{
-            //    var newWhitespaceTrivia = SyntaxFactory.SyntaxTrivia(SyntaxKind.WhitespaceTrivia, new string(' ', parentIndentWidth + 4));
-            //    var newStatement = statement
-            //        .WithLeadingTrivia(newWhitespaceTrivia, SyntaxFactory.EndOfLine("\n"))
-            //        .WithTrailingTrivia(SyntaxFactory.EndOfLine("\n"));
-            //    newStatements = newStatements.Add(newStatement);
-            //}
+            var newStatements = new SyntaxList<StatementSyntax>();
+            foreach (var statement in node.Statements)
+            {
+                var newWhitespaceTrivia = SyntaxFactory.SyntaxTrivia(SyntaxKind.WhitespaceTrivia, new string(' ', parentIndentWidth + 4));
+                var newStatement = statement
+                    .WithLeadingTrivia(SyntaxFactory.EndOfLine("\n"), newWhitespaceTrivia)
+                    .WithTrailingTrivia(SyntaxFactory.EndOfLine("\n"));
+                newStatements = newStatements.Add(newStatement);
+            }
 
             node = node
-                //.WithStatements(newStatements)
+                .WithStatements(newStatements)
                 .WithOpenBraceToken(openBrace)
                 .WithCloseBraceToken(closeBrace);
 

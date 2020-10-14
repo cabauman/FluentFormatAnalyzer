@@ -25,7 +25,7 @@ namespace FluentFormatAnalyzer
         public override void Initialize(AnalysisContext context)
         {
             context.EnableConcurrentExecution();
-            //context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
+            context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
             context.RegisterSyntaxNodeAction(
                 AnalyzeMethodDeclaration,
                 SyntaxKind.ExpressionStatement/*, SyntaxKind.LocalDeclarationStatement, SyntaxKind.ReturnStatement*/);
@@ -34,8 +34,6 @@ namespace FluentFormatAnalyzer
         private static void AnalyzeMethodDeclaration(SyntaxNodeAnalysisContext context)
         {
             var expressionStatement = (ExpressionStatementSyntax)context.Node;
-            //context.ReportDiagnostic(Diagnostic.Create(Rule, expressionStatement.GetLocation()));
-            //return;
             var invocationExpressions = expressionStatement.DescendantNodes(x => !x.IsKind(SyntaxKind.ArgumentList)).OfType<InvocationExpressionSyntax>();
             Helper(context, invocationExpressions);
         }
